@@ -1,0 +1,88 @@
+---
+title: "EDA and Data Augmentation on CIFAR-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+library(ggplot2)
+library(gridExtra)
+```
+
+```{r load-data}
+# Import numpy via reticulate
+np <- import("numpy")
+
+# Load the data
+x_train <- np$load("../data/raw/x_train.npy")
+y_train <- np$load("../data/raw/y_train.npy")
+
+# Optional: sample subset
+sample_idx <- 1:1000
+x_sample <- x_train[sample_idx,,,]
+y_sample <- y_train[sample_idx,]
+```
+
+
+```{r visualize}
+# Convert first image to dataframe for ggplot
+img <- as.data.frame(as.table(x_sample[1,,,]))
+colnames(img) <- c("x", "y", "channel", "value")
+
+# Plot first image (RGB split)
+ggplot(img, aes(x = x, y = y, fill = value)) +
+  geom_tile() +
+  facet_wrap(~ channel) +
+  scale_fill_gradient(low = "black", high = "white") +
+  theme_void() +
+  ggtitle("First CIFAR-10 Image (Channels)")
+
+plot_rgb_image <- function(image_array) {
+  img <- image_array / 255  # Normalize
+  dimnames(img) <- list(x = 1:32, y = 1:32, channel = c("R", "G", "B"))
+  
+  # Convert to dataframe for ggplot
+  df <- as.data.frame(as.table(img))
+  df <- reshape2::dcast(df, x + y ~ channel, value.var = "Freq")
+  
+  # Convert x and y to numeric
+  df$x <- as.numeric(as.character(df$x))
+  df$y <- as.numeric(as.character(df$y))
+  
+  ggplot(df, aes(x = x, y = y)) +
+    geom_tile(fill = rgb(df$R, df$G, df$B)) +
+    scale_y_reverse() +  # Flip y-axis for image orientation
+    theme_void() +
+    ggtitle("First CIFAR-10 Image (RGB)")
+}
+
+# Probar la función
+plot_rgb_image(x_sample[1,,,])
+```
+
+
+```{r images-grid}
+library(gridExtra)
+library(grid)
+
+plot_rgb_image_no_title <- function(image_array) {
+  img <- image_array / 255
+  dimnames(img) <- list(x = 1:32, y = 1:32, channel = c("R", "G", "B"))
+  df <- as.data.frame(as.table(img))
+  df <- reshape2::dcast(df, x + y ~ channel, value.var = "Freq")
+  df$x <- as.numeric(as.character(df$x))
+  df$y <- as.numeric(as.character(df$y))
+  
+  ggplot(df, aes(x = x, y = y)) +
+    geom_tile(fill = rgb(df$R, df$G, df$B)) +
+    scale_y_reverse() +
+    theme_void()
+}
+
+# Muestra las primeras 9 imágenes
+plots <- lapply(1:9, function(i) plot_rgb_image_no_title(x_sample[i,,,]))
+grid.arrange(grobs = plots, ncol = 3)
+```
+
+
