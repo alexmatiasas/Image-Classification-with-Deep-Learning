@@ -85,4 +85,21 @@ plots <- lapply(1:9, function(i) plot_rgb_image_no_title(x_sample[i,,,]))
 grid.arrange(grobs = plots, ncol = 3)
 ```
 
+```{r class-labeling}
+# Class names in CIFAR-10
+class_names <- c("airplane", "automobile", "bird", "cat", "deer",
+                 "dog", "frog", "horse", "ship", "truck")
+
+# Convert labels to dataframe with class names
+labels_df <- data.frame(label = factor(y_sample, levels = 0:9, labels = class_names))
+
+# Plot class distribution
+ggplot(labels_df, aes(x = label)) +
+  geom_bar(fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Class Distribution (Sample of 1000 Images)", x = "Class", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
 
