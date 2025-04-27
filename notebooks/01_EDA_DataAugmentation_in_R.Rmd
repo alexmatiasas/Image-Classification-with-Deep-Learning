@@ -100,6 +100,98 @@ ggplot(labels_df, aes(x = label)) +
   labs(title = "Class Distribution (Sample of 1000 Images)", x = "Class", y = "Count") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+```{r images-classes}
+library(gridExtra)
+library(ggplot2)
+
+# Class names in CIFAR-10
+class_names <- c("airplane", "automobile", "bird", "cat", "deer",
+                 "dog", "frog", "horse", "ship", "truck")
+
+# Create a dataframe to map labels
+labels_df <- data.frame(
+  index = 1:length(y_sample),
+  label = factor(y_sample, levels = 0:9, labels = class_names)
+)
+
+# Function to plot one image
+plot_rgb_image_label <- function(image_array, label) {
+  img <- image_array / 255
+  dimnames(img) <- list(x = 1:32, y = 1:32, channel = c("R", "G", "B"))
+  df <- as.data.frame(as.table(img))
+  df <- reshape2::dcast(df, x + y ~ channel, value.var = "Freq")
+  df$x <- as.numeric(as.character(df$x))
+  df$y <- as.numeric(as.character(df$y))
+  
+  ggplot(df, aes(x = x, y = y)) +
+    geom_tile(fill = rgb(df$R, df$G, df$B)) +
+    scale_y_reverse() +
+    theme_void() +
+    ggtitle(label)
+}
+
+# Select 9 images per class
+plots <- list()
+for (class in class_names) {
+  indices <- labels_df$index[labels_df$label == class][1:9]
+  class_plots <- lapply(indices, function(i) plot_rgb_image_label(x_sample[i,,,], class))
+  plots <- c(plots, class_plots)
+}
+
+# Arrange plots in a grid (9 columns)
+grid.arrange(grobs = plots, ncol = 9)
+```
 
 
+
+```{r mean-and-std}
+# Calculate mean and standard deviation for each RGB channel
+
+# Normalize the pixel values to the range [0, 1]
+x_sample_norm <- x_sample / 255
+
+# Compute the mean for each channel (Red, Green, Blue)
+channel_means <- apply(x_sample_norm, 4, mean)
+
+# Compute the standard deviation for each channel
+channel_stds <- apply(x_sample_norm, 4, sd)
+
+# Create a dataframe to display the statistics
+channel_stats <- data.frame(
+  Channel = c("Red", "Green", "Blue"),
+  Mean = round(channel_means, 4),
+  Std_Dev = round(channel_stds, 4)
+)
+
+# Print the calculated statistics
+print(channel_stats)
+```
+
+```{r histogram of RGB}
+# Convert the sample dataset to a long dataframe format for histogram plotting
+library(reshape2)
+
+# Normalize the pixel values to the range [0, 1]
+x_sample_norm <- x_sample / 255
+
+# Reshape the data: Flatten X and Y, keep channels
+pixel_values <- data.frame(
+  Red = as.vector(x_sample_norm[,,,1]),
+  Green = as.vector(x_sample_norm[,,,2]),
+  Blue = as.vector(x_sample_norm[,,,3])
+)
+
+# Convert to long format
+library(tidyr)
+df_pixels <- pivot_longer(pixel_values, cols = everything(), names_to = "Channel", values_to = "Value")
+
+# Plot histograms
+ggplot(df_pixels, aes(x = Value, fill = Channel)) +
+  geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+  facet_wrap(~Channel) +
+  theme_minimal() +
+  labs(title = "Histogram of Pixel Intensities by Channel", 
+       x = "Pixel Intensity (Normalized)", 
+       y = "Frequency")
+```
 
